@@ -10,7 +10,7 @@ fn main() {
 
     use std::fmt;
 
-    impl fmt::Display for Sigma {
+    impl fmt::Debug for Sigma {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(
                 f,
@@ -26,11 +26,19 @@ fn main() {
     use turing::Movement as M;
     use Sigma as S;
 
-    let mut turing: turing::Turing<1, Sigma, u8> =
-        turing::Turing::new(0, [((0, S::Zero), (S::One, M::Right, 0))]);
+    let mut turing: turing::Turing<2, Sigma, u8> = turing::Turing::new(
+        0,
+        [
+            ((0, S::Zero), (S::One, M::Right, 1)),
+            ((1, S::Zero), (S::One, M::Left, 0)),
+        ],
+    );
 
-    for i in 0..8 {
+    let mut string = String::new();
+
+    loop {
+        std::io::stdin().read_line(&mut string);
         turing.step();
-        println!("{}", turing);
+        println!("{:?}", turing);
     }
 }

@@ -60,7 +60,7 @@ pub struct Turing<
     head: usize,
     // `[0, -1, 1, -2, 3, -3, 4, -4, …]`
     mem: Vec<Alphabet>,
-    state: State,
+    state: Option<State>,
     quint: [((State, Alphabet), (Alphabet, Movement, State)); INST],
 }
 
@@ -74,7 +74,7 @@ impl<const INST: usize, Alphabet: Clone + PartialEq + Default, State: Clone + Pa
         Self {
             head: 0,
             mem: vec![Alphabet::default()],
-            state,
+            state: Some(state),
             quint,
         }
     }
@@ -88,19 +88,24 @@ use std::fmt;
 
 impl<
         const INST: usize,
-        Alphabet: Clone + PartialEq + Default + fmt::Display,
-        State: Clone + PartialEq + fmt::Display,
+        Alphabet: Clone + PartialEq + Default + fmt::Debug,
+        State: Clone + PartialEq + fmt::Debug,
     > Turing<INST, Alphabet, State>
 {
     fn fmt_state_mem(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}| ", self.state)?;
-        for i in (1..self.mem.len()).filter(|i| i % 2 == 1).rev() {
-            write!(f, "{} ", self.mem[i])?;
+        match &self.state {
+            Some(state) => {
+                write!(f, "{:?}| ", state)?;
+                for i in (1..self.mem.len()).filter(|i| i % 2 == 1).rev() {
+                    write!(f, "{:?} ", self.mem[i])?;
+                }
+                for i in (0..self.mem.len()).filter(|i| i % 2 == 0) {
+                    write!(f, "{:?} ", self.mem[i])?;
+                }
+                Ok(())
+            }
+            None => write!(f, "terminated…"), // writeln!(f)
         }
-        for i in (0..self.mem.len()).filter(|i| i % 2 == 0) {
-            write!(f, "{} ", self.mem[i])?;
-        }
-        writeln!(f)
     }
 
     fn fmt_index(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -125,13 +130,13 @@ impl<
 
 impl<
         const INST: usize,
-        Alphabet: Clone + PartialEq + Default + fmt::Display,
-        State: Clone + PartialEq + fmt::Display,
-    > fmt::Display for Turing<INST, Alphabet, State>
+        Alphabet: Clone + PartialEq + Default + fmt::Debug,
+        State: Clone + PartialEq + fmt::Debug,
+    > fmt::Debug for Turing<INST, Alphabet, State>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_state_mem(f)?;
-        self.fmt_index(f)
+        self.fmt_state_mem(f)
+        // self.fmt_index(f)
     }
 }
 
@@ -156,20 +161,24 @@ impl<const INST: usize, Alphabet: Clone + PartialEq + Default, State: Clone + Pa
     }
 
     fn step(&mut self) {
-        if let Some((character, movement, state)) =
-            self.delta(self.state.clone(), self.mem[self.head].clone())
-        {
-            self.mem[self.head] = character;
-            if let Some(head) = self.movement(movement) {
-                self.head = head;
+        if let Some(state) = &self.state {
+            if let Some((character, movement, state)) =
+                self.delta(state.clone(), self.mem[self.head].clone())
+            {
+                self.mem[self.head] = character;
+                if let Some(head) = self.movement(movement) {
+                    self.head = head;
 
-                if self.head >= self.mem.len() {
-                    for i in 0..(1 + self.head - self.mem.len()) {
-                        self.mem.push(Alphabet::default())
+                    if self.head >= self.mem.len() {
+                        for i in 0..(1 + self.head - self.mem.len()) {
+                            self.mem.push(Alphabet::default())
+                        }
                     }
                 }
+                self.state = Some(state);
+            } else {
+                self.state = None;
             }
-            self.state = state;
         }
     }
 }
